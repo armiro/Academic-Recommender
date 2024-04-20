@@ -1,0 +1,7 @@
+pyspellchecker==0.8.1
+pandas==2.0.3
+numpy==1.25.2
+matplotlib==3.7.1
+nltk==3.8.1
+gensim==4.3.2
+huggingface_hub == 0.20.3
