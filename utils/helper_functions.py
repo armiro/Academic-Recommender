@@ -2,6 +2,7 @@ import os, pickle
 import gensim.downloader as dl_api
 from gensim.models import KeyedVectors
 from huggingface_hub import hf_hub_download
+from main import CACHE_DIR
 
 
 # create custom mapping over word combinations not available in pretrained model
@@ -36,8 +37,6 @@ def load_model(library, model_name, model_file):
                 pickle.dump(model, f)
 
     elif library == 'huggingface':
-        cache_dir = './cache/'
-        os.makedirs(cache_dir, exist_ok=True)
 
         try:
             with open("hf_token.txt", 'rt') as file:
@@ -46,7 +45,7 @@ def load_model(library, model_name, model_file):
             print('huggingface auth token file <hf_token.txt> does not exist!')
 
         file_name = model_name[model_name.find('_')+1:] + '.txt'
-        raw_model = hf_hub_download(repo_id=model_name, filename=file_name, cache_dir=cache_dir,
+        raw_model = hf_hub_download(repo_id=model_name, filename=file_name, cache_dir=CACHE_DIR,
                                     token=hf_token)
         model = KeyedVectors.load_word2vec_format(raw_model)
 
