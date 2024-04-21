@@ -1,4 +1,7 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-blueviolet.svg)](https://opensource.org/licenses/MIT)
+![Status: Final](https://img.shields.io/badge/Status-Final-yellowgreen.svg)
 # Academic-Recommender
+
 A basic word-embedding model to find best matching students or professors, and recommend the top n results
 to a specific student. It can be considered as a basic similarity-based recommender system, where system
 input is only a list of strings, and the system finds most similar strings based on their embedded
