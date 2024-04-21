@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from main import find_closest_profs_to, load_data, generate_ri_map
+from main import find_closest_to, load_data, generate_ri_map
 from utils.helper_functions import load_model
 import argparse
 
@@ -27,6 +27,7 @@ def get_topn_professors():
     try:
         student_id = int(request.args.get('student_id'))
         topn = int(request.args.get('topn', 1))  # num suggestions; default to 1
+        target = request.args.get('recommend')
         split_method = request.args.get('method', DEFAULT_SPLIT_METHOD)  # word splitting method
         model_file = MODELS_DIR + args.model_name + '.pkl'  # preloaded model file (if available)
 
@@ -34,8 +35,8 @@ def get_topn_professors():
         pretrained_model = load_model(library=args.model_lib, model_name=args.model_name, model_file=model_file)
         ri_map = generate_ri_map(method=split_method, students=df_students, professors=df_students,
                                  model=pretrained_model)
-        top_profs = find_closest_profs_to(student_idx=student_id, students=df_students, professors=df_profs,
-                                          model=pretrained_model, map_dict=ri_map, topn=topn)
+        top_profs = find_closest_to(student_idx=student_id, students=df_students, professors=df_profs,
+                                    model=pretrained_model, map_dict=ri_map, topn=topn, target_role=target)
 
         # format the response as json
         serialized_top_profs = [prof.drop('Tokenized RIs').to_dict() for prof in top_profs]
