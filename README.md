@@ -41,7 +41,7 @@ Run this command in the CLI to open a local Flask API:
 
 Go to `http://0.0.0.0:105` or `http://127.0.0.1:105`. Full url most also have other params, For example:
 
-`http://localhost:105/api/top_professors?student_id=5456&topn=5&method=phrase`
+`http://localhost:105/api/top_professors?student_id=5456&recommend=prof&topn=5&method=phrase`
 
 API json response would look like this:
 
