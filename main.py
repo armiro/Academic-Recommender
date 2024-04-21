@@ -8,15 +8,57 @@ from utils.helper_functions import *
 CACHE_DIR = './cache/'
 DATA_DIR = './data/'
 MODELS_DIR = './models/'
+DATASET_NAME = 'university_data.xlsx'
 
 SPLIT_METHOD = 'phrase'  # select between 'phrase' and 'tokenize'
 
 MODEL_LIB = 'gensim'  # select between 'gensim' and 'huggingface'
 MODEL_NAME = 'fasttext-wiki-news-subwords-300'  # gensim model
 # MODEL_NAME = 'Word2vec/wikipedia2vec_enwiki_20180420_100d'  # hf model
-MODEL_FILE = MODELS_DIR + MODEL_NAME + '.pkl'
+MODEL_FILE = MODELS_DIR + MODEL_NAME + '.pkl'  # if available
 
 STUDENT_ID = 1700
+TOPN = 5
+
+
+def load_data(data_path, method):
+    xls_file = pd.ExcelFile(data_path)
+    # print(xls_file.sheet_names)
+
+    df_profs = pd.read_excel(xls_file, sheet_name=xls_file.sheet_names[1])
+    df_students = pd.read_excel(xls_file, sheet_name=xls_file.sheet_names[0])
+
+    df_profs.dropna(axis=0, inplace=True)  # drop empty rows
+    df_students.dropna(axis=0, inplace=True)  # drop empty rows
+
+    # sanity check over null values
+    assert df_profs.all().all()
+    assert df_students.all().all()
+
+    # apply preprocessing steps, defined separately
+    df_profs['Tokenized RIs'] = df_profs['Research Interests'].apply(
+        lambda x: preprocess(x, method=method))
+    df_students['Tokenized RIs'] = df_students['Research Interests'].apply(
+        lambda x: preprocess(x, method=method))
+
+    # print(df_profs.head())
+    # print(df_students.head())
+    return df_students, df_profs
+
+
+def generate_ri_map(method, students, professors, model):
+    if method == 'phrase':
+        print('----------------------------')
+        print('creating embedding map for phrases...')
+        ri_map = dict()
+        ri_map = create_embedding_map_for(students, col_name='Tokenized RIs',
+                                          model=model, map_dict=ri_map)
+        ri_map = create_embedding_map_for(professors, col_name='Tokenized RIs',
+                                          model=model, map_dict=ri_map)
+        print(f'there are {len(ri_map)} unique combination of words in the dataset.')
+        return ri_map
+    else:
+        return None
 
 
 def find_closest_profs_to(student_idx, students, professors, model, map_dict=None, topn=1):
@@ -42,28 +84,7 @@ def find_closest_profs_to(student_idx, students, professors, model, map_dict=Non
 
 
 def main():
-    xls_file = pd.ExcelFile(DATA_DIR + 'university_data.xlsx')
-    # print(xls_file.sheet_names)
-
-    df_profs = pd.read_excel(xls_file, sheet_name=xls_file.sheet_names[1])
-    df_students = pd.read_excel(xls_file, sheet_name=xls_file.sheet_names[0])
-
-    df_profs.dropna(axis=0, inplace=True)  # drop empty rows
-    df_students.dropna(axis=0, inplace=True)  # drop empty rows
-
-    # sanity check over null values
-    assert df_profs.all().all()
-    assert df_students.all().all()
-
-    # apply preprocessing steps, defined separately
-    df_profs['Tokenized RIs'] = df_profs['Research Interests'].apply(
-        lambda x: preprocess(x, method=SPLIT_METHOD))
-    df_students['Tokenized RIs'] = df_students['Research Interests'].apply(
-        lambda x: preprocess(x, method=SPLIT_METHOD))
-
-    # print(df_profs.head())
-    # print(df_students.head())
-
+    df_students, df_profs = load_data(data_path=DATA_DIR + DATASET_NAME, method=SPLIT_METHOD)
     available_corpora = dl_api.info()['models']
 
     # see all models and their file sizes
@@ -89,17 +110,8 @@ def main():
             for word in interest.split():
                 if word not in pretrained_model: print(word)
 
-    if SPLIT_METHOD == 'phrase':
-        print('----------------------------')
-        print('creating embedding map for phrases...')
-        ri_map = dict()
-        ri_map = create_embedding_map_for(df_students, col_name='Tokenized RIs',
-                                          model=pretrained_model, map_dict=ri_map)
-        ri_map = create_embedding_map_for(df_profs, col_name='Tokenized RIs',
-                                          model=pretrained_model, map_dict=ri_map)
-        print(f'there are {len(ri_map)} unique combination of words in the dataset.')
-    else:
-        ri_map = None
+    ri_map = generate_ri_map(method=SPLIT_METHOD, students=df_students, professors=df_students,
+                             model=pretrained_model)
 
     print('----------------------------')
     print('Student Name:', df_students['Name'][STUDENT_ID])
@@ -111,7 +123,7 @@ def main():
     st = time.time()
     most_similar_profs = find_closest_profs_to(student_idx=STUDENT_ID, students=df_students,
                                                professors=df_profs, model=pretrained_model,
-                                               map_dict=ri_map, topn=5)
+                                               map_dict=ri_map, topn=TOPN)
     print('search done!')
     print('elapsed time:', round(time.time() - st), 'secs')
     print('----------------------------')
