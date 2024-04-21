@@ -10,7 +10,7 @@ DATA_DIR = './data/'
 MODELS_DIR = './models/'
 DATASET_NAME = 'university_data.xlsx'
 
-SPLIT_METHOD = 'phrase'  # select between 'phrase' and 'tokenize'
+SPLIT_METHOD = 'phrase'  # select between 'phrase' and 'token'
 
 MODEL_LIB = 'gensim'  # select between 'gensim' and 'huggingface'
 MODEL_NAME = 'fasttext-wiki-news-subwords-300'  # gensim model
