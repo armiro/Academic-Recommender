@@ -2,7 +2,8 @@ import os, pickle
 import gensim.downloader as dl_api
 from gensim.models import KeyedVectors
 from huggingface_hub import hf_hub_download
-from main import CACHE_DIR
+
+CACHE_DIR = './cache/'
 
 
 # create custom mapping over word combinations not available in pretrained model
