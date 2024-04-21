@@ -17,8 +17,9 @@ MODEL_NAME = 'fasttext-wiki-news-subwords-300'  # gensim model
 # MODEL_NAME = 'Word2vec/wikipedia2vec_enwiki_20180420_100d'  # hf model
 MODEL_FILE = MODELS_DIR + MODEL_NAME + '.pkl'  # if available
 
-STUDENT_ID = 1700
+STUDENT_ID = 8869
 TOPN = 5
+TARGET_ROLE = 'student'  # select between 'student' and 'prof'
 
 
 def load_data(data_path, method):
@@ -61,26 +62,32 @@ def generate_ri_map(method, students, professors, model):
         return None
 
 
-def find_closest_profs_to(student_idx, students, professors, model, map_dict=None, topn=1):
+def find_closest_to(student_idx, students, professors, model, map_dict=None, topn=1, target_role='student'):
     student_ris = students['Tokenized RIs'][student_idx]
     student_vecs = generate_vectors_from(student_ris, model=model, map_dict=map_dict)
 
+    target_df = professors if target_role == 'prof' else students if target_role == 'student' else None
+    if target_df is None:
+        raise ValueError("target role must either be 'prof' or 'student'")
+    if target_role == 'student':  # drop input student if recommending students
+        target_df = target_df.drop(student_idx)
+
     avg_sims = list()
     # iterate over each professor and their interests
-    for prof_id, prof_ris in professors['Tokenized RIs'].items():
+    for target_id, target_ris in target_df['Tokenized RIs'].items():
         sims = 0
-        prof_vecs = generate_vectors_from(prof_ris, model=model, map_dict=map_dict)
-        # calculate mean vector similarity between each student's interest and prof's interests
+        target_vecs = generate_vectors_from(target_ris, model=model, map_dict=map_dict)
+        # calculate mean vector similarity between each student's interest and target's interests
         for student_vec in student_vecs:
-            sims += model.cosine_similarities(student_vec, prof_vecs).mean()
+            sims += model.cosine_similarities(student_vec, target_vecs).mean()
 
-        avg_sim = sims/len(student_vecs)  # avg distance between student & prof
-        avg_sims.append((prof_id, avg_sim))
+        avg_sim = sims/len(student_vecs)  # avg distance between student & student/prof
+        avg_sims.append((target_id, avg_sim))
 
     sorted_sims = sorted(avg_sims, key=lambda x: x[1], reverse=True)  # sort similarities
-    # extract top n profs based on maximum similarity
-    topn_profs = [professors.loc[prof_id] for prof_id, _ in sorted_sims[:topn]]
-    return topn_profs
+    # extract top n students/profs based on maximum similarity
+    topn_targets = [target_df.loc[target_id] for target_id, _ in sorted_sims[:topn]]
+    return topn_targets
 
 
 def main():
@@ -119,20 +126,20 @@ def main():
     print('Student Department:', df_students['University Field'][STUDENT_ID])
 
     print('----------------------------')
-    print('searching for professors ...')
+    print(f'searching for {TARGET_ROLE}s ...')
     st = time.time()
-    most_similar_profs = find_closest_profs_to(student_idx=STUDENT_ID, students=df_students,
-                                               professors=df_profs, model=pretrained_model,
-                                               map_dict=ri_map, topn=TOPN)
+    most_similar_targets = find_closest_to(student_idx=STUDENT_ID, students=df_students,
+                                           professors=df_profs, model=pretrained_model,
+                                           map_dict=ri_map, topn=TOPN, target_role=TARGET_ROLE)
     print('search done!')
     print('elapsed time:', round(time.time() - st), 'secs')
     print('----------------------------')
 
-    for prof_idx, top_prof in enumerate(most_similar_profs):
+    for target_idx, top_target in enumerate(most_similar_targets):
         print('******++')
-        print(f"Best Professor #{prof_idx + 1}: {top_prof['Name']}")
-        print(f"Prof Research Focus: {top_prof['Research Interests']}")
-        print(f"Prof Faculty: {top_prof['University Field']}")
+        print(f"Best {TARGET_ROLE.capitalize()} #{target_idx + 1}: {top_target['Name']}")
+        print(f"{TARGET_ROLE.capitalize()} Research Interests: {top_target['Research Interests']}")
+        print(f"{TARGET_ROLE.capitalize()} Department: {top_target['University Field']}")
 
 
 if __name__ == "__main__":
