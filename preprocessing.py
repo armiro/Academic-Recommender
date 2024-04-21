@@ -17,7 +17,7 @@ def normalize(input_list):  # make all words lower and clean indents
 
 def remove_stop_words_from(input_list, method):  # remove stop words like 'of', 'and'
     stop_words = stopwords.words('english')
-    if method == 'tokenize':
+    if method == 'token':
         return [e for w in input_list for e in w.split() if e not in stop_words]  # & return tokens
     elif method == 'phrase':
         return [' '.join([e for e in w.split() if e not in stop_words]) for w in input_list]
