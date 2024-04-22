@@ -1,8 +1,13 @@
-import pandas as pd
+"""
+Academic Student-Student and Student-Professor Recommender using Word Embedding Models
+Developed by Arman H. (https://github.com/armiro)
+"""
 import time
+import pandas as pd
 
+import gensim.downloader as dl_api
 from preprocessing import preprocess
-from utils.helper_functions import *
+from utils.helper_functions import create_embedding_map_for, generate_vectors_from, load_model
 
 
 CACHE_DIR = './cache/'
@@ -17,12 +22,18 @@ MODEL_NAME = 'fasttext-wiki-news-subwords-300'  # gensim model
 # MODEL_NAME = 'Word2vec/wikipedia2vec_enwiki_20180420_100d'  # hf model
 MODEL_FILE = MODELS_DIR + MODEL_NAME + '.pkl'  # if available
 
-STUDENT_ID = 8869
+STUDENT_ID = 886
 TOPN = 5
 TARGET_ROLE = 'student'  # select between 'student' and 'prof'
 
 
 def load_data(data_path, method):
+    """
+    load dataset from xlsx/csv data and do preprocessing steps
+    :param data_path: string, relational path to the dataset under data directory
+    :param method: string, splitting method to tokenize strings; ['phrase' or 'token']
+    :return: pandas dataframe, two dataframes: students df and professors df
+    """
     xls_file = pd.ExcelFile(data_path)
     # print(xls_file.sheet_names)
 
@@ -48,21 +59,42 @@ def load_data(data_path, method):
 
 
 def generate_ri_map(method, students, professors, model):
+    """
+    generate mean word embedding map for every phrase in the dataset
+    activated only if SPLIT_METHOD == 'phrase'
+    :param method: string, splitting method
+    :param students: pandas dataframe
+    :param professors: pandas dataframe
+    :param model: word embedding model (previously trained)
+    :return: dict or none, depending on 'method' value
+    """
     if method == 'phrase':
         print('----------------------------')
         print('creating embedding map for phrases...')
-        ri_map = dict()
+        ri_map = {}
         ri_map = create_embedding_map_for(students, col_name='Tokenized RIs',
                                           model=model, map_dict=ri_map)
         ri_map = create_embedding_map_for(professors, col_name='Tokenized RIs',
                                           model=model, map_dict=ri_map)
         print(f'there are {len(ri_map)} unique combination of words in the dataset.')
         return ri_map
-    else:
-        return None
+
+    return None
 
 
 def find_closest_to(student_idx, students, professors, model, map_dict=None, topn=1, target_role='student'):
+    """
+    find top matching students/professors for the input student using semantic similarity
+    between research interests and previously trained word embedding model
+    :param student_idx: int
+    :param students: pandas dataframe
+    :param professors: pandas dataframe
+    :param model: word embedding model (previously trained)
+    :param map_dict: dict or none, map of research interest vectors if split method is 'phrase'
+    :param topn: int, number of suggestions
+    :param target_role: string, target role to be suggested; ['student' or 'prof']
+    :return: list of dicts
+    """
     student_ris = students['Tokenized RIs'][student_idx]
     student_vecs = generate_vectors_from(student_ris, model=model, map_dict=map_dict)
 
@@ -72,7 +104,7 @@ def find_closest_to(student_idx, students, professors, model, map_dict=None, top
     if target_role == 'student':  # drop input student if recommending students
         target_df = target_df.drop(student_idx)
 
-    avg_sims = list()
+    avg_sims = []
     # iterate over each professor and their interests
     for target_id, target_ris in target_df['Tokenized RIs'].items():
         sims = 0
@@ -91,6 +123,11 @@ def find_closest_to(student_idx, students, professors, model, map_dict=None, top
 
 
 def main():
+    """
+    load data and trained model, calculate research interest vector mapping, find top n
+    most similar students/professors to a specific student
+    :return: None
+    """
     df_students, df_profs = load_data(data_path=DATA_DIR + DATASET_NAME, method=SPLIT_METHOD)
     available_corpora = dl_api.info()['models']
 
@@ -111,11 +148,13 @@ def main():
     for interests in df_students['Tokenized RIs']:
         for interest in interests:
             for word in interest.split():
-                if word not in pretrained_model: print(word)
+                if word not in pretrained_model:
+                    print(word)
     for interests in df_profs['Tokenized RIs']:
         for interest in interests:
             for word in interest.split():
-                if word not in pretrained_model: print(word)
+                if word not in pretrained_model:
+                    print(word)
 
     ri_map = generate_ri_map(method=SPLIT_METHOD, students=df_students, professors=df_students,
                              model=pretrained_model)
