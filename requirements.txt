@@ -7,3 +7,4 @@ gensim==4.3.2
 huggingface_hub == 0.20.3
 openpyxl==3.1.2
 flask==3.0.3
+pylint==3.1.0
