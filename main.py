@@ -30,6 +30,7 @@ TARGET_ROLE = 'student'  # select between 'student' and 'prof'
 def load_data(data_path, method):
     """
     load dataset from xlsx/csv data and do preprocessing steps
+
     :param data_path: string, relational path to the dataset under data directory
     :param method: string, splitting method to tokenize strings; ['phrase' or 'token']
     :return: pandas dataframe, two dataframes: students df and professors df
@@ -62,6 +63,7 @@ def generate_ri_map(method, students, professors, model):
     """
     generate mean word embedding map for every phrase in the dataset
     activated only if SPLIT_METHOD == 'phrase'
+
     :param method: string, splitting method
     :param students: pandas dataframe
     :param professors: pandas dataframe
@@ -86,6 +88,7 @@ def find_closest_to(student_idx, students, professors, model, map_dict=None, top
     """
     find top matching students/professors for the input student using semantic similarity
     between research interests and previously trained word embedding model
+
     :param student_idx: int
     :param students: pandas dataframe
     :param professors: pandas dataframe
@@ -126,6 +129,7 @@ def main():
     """
     load data and trained model, calculate research interest vector mapping, find top n
     most similar students/professors to a specific student
+
     :return: None
     """
     df_students, df_profs = load_data(data_path=DATA_DIR + DATASET_NAME, method=SPLIT_METHOD)
