@@ -1,5 +1,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blueviolet.svg)](https://opensource.org/licenses/MIT)
 ![Status: Final](https://img.shields.io/badge/Status-Final-yellowgreen.svg)
+![Pylint](https://img.shields.io/badge/PyLint-8.06/10-brightgreen)
 # Academic-Recommender
 
 A basic word-embedding model to find best matching students or professors, and recommend the top n results
@@ -39,7 +40,7 @@ Run this command in the CLI to open a local Flask API:
 
 `python ./app.py -dataset=university_data.xlsx -model_lib=gensim -model_name=fasttext -wiki-news-subwords-300`
 
-Go to `http://0.0.0.0:105` or `http://127.0.0.1:105`. Full url most also have other params, For example:
+Go to `http://0.0.0.0:105` or `http://127.0.0.1:105`. Full url must also have other params, for example:
 
 `http://localhost:105/api/top_professors?student_id=5456&recommend=prof&topn=5&method=phrase`
 
