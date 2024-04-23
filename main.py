@@ -20,7 +20,7 @@ SPLIT_METHOD = 'phrase'  # select between 'phrase' and 'token'
 MODEL_LIB = 'gensim'  # select between 'gensim' and 'huggingface'
 MODEL_NAME = 'fasttext-wiki-news-subwords-300'  # gensim model
 # MODEL_NAME = 'Word2vec/wikipedia2vec_enwiki_20180420_100d'  # hf model
-MODEL_FILE = MODELS_DIR + MODEL_NAME + '.pkl'  # if available
+MODEL_FILE = MODELS_DIR + MODEL_NAME + '.pkl'  # if file available
 
 STUDENT_ID = 886
 TOPN = 5
