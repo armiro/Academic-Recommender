@@ -7,7 +7,7 @@ import pandas as pd
 
 import gensim.downloader as dl_api
 from preprocessing import preprocess
-from utils.helper_functions import create_embedding_map_for, generate_vectors_from, load_model
+from utils.helper_functions import *
 
 
 CACHE_DIR = './cache/'
@@ -16,9 +16,10 @@ MODELS_DIR = './models/'
 DATASET_NAME = 'university_data.xlsx'
 
 SPLIT_METHOD = 'phrase'  # select between 'phrase' and 'token'
+WINDOW_SIZE = 5  # window size for cluster mapping
 
 MODEL_LIB = 'gensim'  # select between 'gensim' and 'huggingface'
-MODEL_NAME = 'fasttext-wiki-news-subwords-300'  # gensim model
+MODEL_NAME = 'glove-wiki-gigaword-50'  # gensim model
 # MODEL_NAME = 'Word2vec/wikipedia2vec_enwiki_20180420_100d'  # hf model
 MODEL_FILE = MODELS_DIR + MODEL_NAME + '.pkl'  # if file available
 
@@ -59,26 +60,55 @@ def load_data(data_path, method):
     return df_students, df_profs
 
 
-def generate_ri_map(method, students, professors, model):
+def check_for_unseen_words_in(dataframe_col, model):
+    have_unseen_words = False
+    for interests in dataframe_col:
+        for interest in interests:
+            if have_unseen_words: break
+            for word in interest.split():
+                if word not in model:
+                    have_unseen_words = True
+                    break
+    return have_unseen_words
+
+
+def generate_ri_map(method, students, professors, model, window_size):
     """
-    generate mean word embedding map for every phrase in the dataset
+    generate mean word embedding map for every phrase in the dataset, based on sub-word
+    averaging or neighboring words averaging (depending on use_cluster_mapping)
     activated only if SPLIT_METHOD == 'phrase'
 
     :param method: string, splitting method
     :param students: pandas dataframe
     :param professors: pandas dataframe
     :param model: word embedding model (previously trained)
+    :param window_size: integer, window size when averaging neighboring vectors
     :return: dict or none, depending on 'method' value
     """
+    have_unseen_words = check_for_unseen_words_in(pd.concat([students['Tokenized RIs'],
+                                                             professors['Tokenized RIs']]),
+                                                  model=model)
+    # if method == 'token' and have_unseen_words:
+    #     raise ValueError('there are words not available in ')
     if method == 'phrase':
         print('----------------------------')
         print('creating embedding map for phrases...')
         ri_map = {}
-        ri_map = create_embedding_map_for(students, col_name='Tokenized RIs',
-                                          model=model, map_dict=ri_map)
-        ri_map = create_embedding_map_for(professors, col_name='Tokenized RIs',
-                                          model=model, map_dict=ri_map)
-        print(f'there are {len(ri_map)} unique combination of words in the dataset.')
+        if have_unseen_words:
+            print('using cluster mapping; there are words not available in model vocab...')
+            ri_map = create_cluster_map_for(students, target_col='Tokenized RIs',
+                                            ref_col='University Field', model=model,
+                                            map_dict=ri_map, window_size=window_size)
+            ri_map = create_cluster_map_for(professors, target_col='Tokenized RIs',
+                                            ref_col='University Field', model=model,
+                                            map_dict=ri_map, window_size=window_size)
+        else:
+            print('using sub-word mean mapping; all sub-words are available in model vocab...')
+            ri_map = create_embedding_map_for(students, col_name='Tokenized RIs',
+                                              model=model, map_dict=ri_map)
+            ri_map = create_embedding_map_for(professors, col_name='Tokenized RIs',
+                                              model=model, map_dict=ri_map)
+        print(f'there are {len(ri_map)} unique unseen words/phrases in the dataset.')
         return ri_map
 
     return None
@@ -148,20 +178,8 @@ def main():
     print('model importing done!')
     print('elapsed time:', round(time.time() - st), 'secs')
 
-    # sanity check: all tokens (words) should be already present in the model vocab
-    for interests in df_students['Tokenized RIs']:
-        for interest in interests:
-            for word in interest.split():
-                if word not in pretrained_model:
-                    print(word)
-    for interests in df_profs['Tokenized RIs']:
-        for interest in interests:
-            for word in interest.split():
-                if word not in pretrained_model:
-                    print(word)
-
     ri_map = generate_ri_map(method=SPLIT_METHOD, students=df_students, professors=df_students,
-                             model=pretrained_model)
+                             model=pretrained_model, window_size=WINDOW_SIZE)
 
     print('----------------------------')
     print('Student Name:', df_students['Name'][STUDENT_ID])
