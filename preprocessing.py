@@ -2,6 +2,7 @@
 preprocessing functions for input dataset
 """
 import re
+import logging
 from nltk.corpus import stopwords
 from spellchecker import SpellChecker
 import nltk
@@ -59,8 +60,8 @@ def check_spells_in(input_list):
     for phrase in input_list:
         misspelled = speller.unknown(phrase.split())
         if misspelled:
-            print('unknown word:', misspelled)
-            print('best correction:', speller.correction(misspelled.pop()))
+            logging.critical('unknown word: %s', misspelled)
+            logging.critical('best correction: %s', speller.correction(misspelled.pop()))
 
 
 def split_into_tokens(input_list):

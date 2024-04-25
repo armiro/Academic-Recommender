@@ -2,6 +2,7 @@
 Local Flask API
 """
 import argparse
+import logging
 from flask import Flask, request, jsonify
 from main import find_closest_to, load_data, generate_ri_map
 from utils.helper_functions import load_model
@@ -27,7 +28,7 @@ def explain():
 
     :return: None
     """
-    print('receiving top matching professors for target student...')
+    logging.info('receiving top matching professors for target student...')
 
 
 @app.route('/api/top_professors', methods=['GET', 'POST'])
@@ -60,9 +61,8 @@ def get_topn_professors():
                     'top_profs': serialized_top_profs}
         return jsonify(response), 200
 
-    except Exception as e:
-        error_msg = str(e)
-        return jsonify({'error': error_msg}), 400
+    except Exception as error_msg:
+        return jsonify({'error': str(error_msg)}), 400
 
 
 if __name__ == '__main__':

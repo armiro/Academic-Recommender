@@ -3,6 +3,7 @@ Several useful functions
 """
 import os
 import pickle
+import logging
 import gensim.downloader as dl_api
 from gensim.models import KeyedVectors
 from huggingface_hub import hf_hub_download
@@ -108,7 +109,7 @@ def load_model(library, model_name, model_file):
             with open("hf_token.txt", mode='rt', encoding='utf-8') as file:
                 hf_token = file.read()
         except FileNotFoundError:
-            print('huggingface auth token file <hf_token.txt> does not exist!')
+            logging.exception('huggingface auth token file <hf_token.txt> not found!')
 
         file_name = model_name[model_name.find('_')+1:] + '.txt'
         raw_model = hf_hub_download(repo_id=model_name, filename=file_name, cache_dir=CACHE_DIR,
@@ -116,6 +117,7 @@ def load_model(library, model_name, model_file):
         model = KeyedVectors.load_word2vec_format(raw_model)
 
     else:
+        logging.error('invalid library name: %s', library)
         raise ValueError("library name must be either 'gensim' or 'huggingface'")
 
     return model

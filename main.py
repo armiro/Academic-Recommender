@@ -3,6 +3,7 @@ Academic Student-Student and Student-Professor Recommender using Word Embedding 
 Developed by Arman H. (https://github.com/armiro)
 """
 import time
+import logging
 import pandas as pd
 
 import gensim.downloader as dl_api
@@ -10,13 +11,12 @@ from preprocessing import preprocess
 from utils.helper_functions import create_embedding_map_for, create_cluster_map_for
 from utils.helper_functions import generate_vectors_from, load_model
 
-
 CACHE_DIR = './cache/'
 DATA_DIR = './data/'
 MODELS_DIR = './models/'
 DATASET_NAME = 'university_data.xlsx'
 
-SPLIT_METHOD = 'phrase'  # select between 'phrase' and 'token'
+SPLIT_METHOD = 'token'  # select between 'phrase' and 'token'
 WINDOW_SIZE = 4  # window size for cluster mapping
 
 MODEL_LIB = 'gensim'  # select between 'gensim' and 'huggingface'
@@ -28,6 +28,8 @@ STUDENT_ID = 900
 TOPN = 5
 TARGET_ROLE = 'student'  # select between 'student' and 'prof'
 
+logging.basicConfig(format='%(asctime)s: %(levelname)s: %(message)s', level=logging.INFO)
+
 
 def load_data(data_path, method):
     """
@@ -38,7 +40,6 @@ def load_data(data_path, method):
     :return: pandas dataframe, two dataframes: students df and professors df
     """
     xls_file = pd.ExcelFile(data_path)
-    # print(xls_file.sheet_names)
 
     df_profs = pd.read_excel(xls_file, sheet_name=xls_file.sheet_names[1])
     df_students = pd.read_excel(xls_file, sheet_name=xls_file.sheet_names[0])
@@ -56,8 +57,6 @@ def load_data(data_path, method):
     df_students['Tokenized RIs'] = df_students['Research Interests'].apply(
         lambda x: preprocess(x, method=method))
 
-    # print(df_profs.head())
-    # print(df_students.head())
     return df_students, df_profs
 
 
@@ -98,14 +97,15 @@ def generate_ri_map(method, students, professors, model, window_size):
                                                              professors['Tokenized RIs']]),
                                                   model=model)
     if method == 'token' and have_unseen_words:
+        logging.error('invalid SPLIT_METHOD value: %s', method)
         raise ValueError("there are words unseen in model vocab, set SPLIT_METHOD to 'phrase'")
 
     if method == 'phrase':
-        print('----------------------------')
-        print('creating embedding map for phrases...')
+        logging.info('----------------------------')
+        logging.info('creating embedding map for phrases...')
         ri_map = {}
         if have_unseen_words:
-            print('using cluster mapping; there are words not available in model vocab...')
+            logging.critical('cluster mapping; there are words not available in model vocab...')
             ri_map = create_cluster_map_for(students, target_col='Tokenized RIs',
                                             ref_col='University Field', model=model,
                                             map_dict=ri_map, window_size=window_size)
@@ -113,12 +113,12 @@ def generate_ri_map(method, students, professors, model, window_size):
                                             ref_col='University Field', model=model,
                                             map_dict=ri_map, window_size=window_size)
         else:
-            print('using sub-word mean mapping; all sub-words are available in model vocab...')
+            logging.critical('sub-word mean mapping; all words are available in model vocab...')
             ri_map = create_embedding_map_for(students, col_name='Tokenized RIs',
                                               model=model, map_dict=ri_map)
             ri_map = create_embedding_map_for(professors, col_name='Tokenized RIs',
                                               model=model, map_dict=ri_map)
-        print(f'there are {len(ri_map)} unique unseen words/phrases in the dataset.')
+        logging.info('there are %d unique unseen words/phrases in the dataset.', len(ri_map))
         return ri_map
 
     return None
@@ -143,6 +143,7 @@ def find_closest_to(student_idx, students, professors, model, map_dict, topn, ta
 
     target_df = professors if target_role == 'prof' else students if target_role == 'student' else None
     if target_df is None:
+        logging.error('invalid target role value: %s', target_role)
         raise ValueError("target role must either be 'prof' or 'student'")
     if target_role == 'student':  # drop input student if recommending students
         target_df = target_df.drop(student_idx)
@@ -156,7 +157,7 @@ def find_closest_to(student_idx, students, professors, model, map_dict, topn, ta
         for student_vec in student_vecs:
             sims += model.cosine_similarities(student_vec, target_vecs).mean()
 
-        avg_sim = sims/len(student_vecs)  # avg distance between student & student/prof
+        avg_sim = sims / len(student_vecs)  # avg distance between student & student/prof
         avg_sims.append((target_id, avg_sim))
 
     sorted_sims = sorted(avg_sims, key=lambda x: x[1], reverse=True)  # sort similarities
@@ -175,41 +176,41 @@ def main():
     df_students, df_profs = load_data(data_path=DATA_DIR + DATASET_NAME, method=SPLIT_METHOD)
 
     # see all models and their file sizes
-    print('*** list of pretrained models in gensim library ***')
+    logging.info('*** list of pretrained models in gensim library ***')
     for name, metadata in dl_api.info()['models'].items():
         if not name.startswith('_'):
-            print(f"name: {name}, size: {round(metadata['file_size']/(1024*1024))} MB")
+            logging.info("name: %s, size: %d MB", name, round(metadata['file_size']/(1024*1024)))
 
-    print('----------------------------')
-    print('loading word embedding model...')
+    logging.info('----------------------------')
+    logging.info('loading word embedding model...')
     st = time.time()
     pretrained_model = load_model(library=MODEL_LIB, model_name=MODEL_NAME, model_file=MODEL_FILE)
-    print('model importing done!')
-    print('elapsed time:', round(time.time() - st), 'secs')
+    logging.info('model importing done!')
+    logging.critical('elapsed time: %d secs', round(time.time() - st))
 
     ri_map = generate_ri_map(method=SPLIT_METHOD, students=df_students, professors=df_students,
                              model=pretrained_model, window_size=WINDOW_SIZE)
 
-    print('----------------------------')
-    print('Student Name:', df_students['Name'][STUDENT_ID])
-    print('Student Research Interests:', df_students['Research Interests'][STUDENT_ID])
-    print('Student Department:', df_students['University Field'][STUDENT_ID])
+    logging.info('----------------------------')
+    logging.info('Student Name: %s', df_students['Name'][STUDENT_ID])
+    logging.info('Student Research Interests: %s', df_students['Research Interests'][STUDENT_ID])
+    logging.info('Student Department: %s', df_students['University Field'][STUDENT_ID])
 
-    print('----------------------------')
-    print(f'searching for {TARGET_ROLE}s ...')
+    logging.info('----------------------------')
+    logging.info('searching for %ss ...', TARGET_ROLE)
     st = time.time()
     most_similar_targets = find_closest_to(student_idx=STUDENT_ID, students=df_students,
                                            professors=df_profs, model=pretrained_model,
                                            map_dict=ri_map, topn=TOPN, target_role=TARGET_ROLE)
-    print('search done!')
-    print('elapsed time:', round(time.time() - st), 'secs')
-    print('----------------------------')
+    logging.info('search done!')
+    logging.critical('elapsed time: %d secs', round(time.time() - st))
+    logging.info('----------------------------')
 
-    for target_idx, top_target in enumerate(most_similar_targets):
-        print('******++')
-        print(f"Best {TARGET_ROLE.capitalize()} #{target_idx + 1}: {top_target['Name']}")
-        print(f"{TARGET_ROLE.capitalize()} Research Interests: {top_target['Research Interests']}")
-        print(f"{TARGET_ROLE.capitalize()} Department: {top_target['University Field']}")
+    for idx, target in enumerate(most_similar_targets):
+        logging.info('******++')
+        logging.info("best %s #%d}: %s}", TARGET_ROLE, idx+1, target['Name'])
+        logging.info("%s research interests: %s", TARGET_ROLE, target['Research Interests'])
+        logging.info("%s department: %s", TARGET_ROLE, target['University Field'])
 
 
 if __name__ == "__main__":
