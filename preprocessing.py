@@ -44,7 +44,7 @@ def remove_stop_words_from(input_list, method):
     elif method == 'phrase':
         return [' '.join([e for e in w.split() if e not in stop_words]) for w in input_list]
     else:
-        raise ValueError("splitting method should either be 'phrase' or 'tokenize'")
+        raise ValueError("splitting method should either be 'phrase' or 'token'")
 
 
 # TODO: use local vocab to make the dictionary more robust
