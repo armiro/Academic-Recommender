@@ -62,10 +62,18 @@ def load_data(data_path, method):
 
 
 def check_for_unseen_words_in(dataframe_col, model):
+    """
+    check if there are any words in dataset that are not available in model vocab
+
+    :param dataframe_col: pandas series, a specific column from dataframe
+    :param model: word embedding model (previously trained)
+    :return: boolean
+    """
     have_unseen_words = False
     for interests in dataframe_col:
         for interest in interests:
-            if have_unseen_words: break
+            if have_unseen_words:
+                break
             for word in interest.split():
                 if word not in model:
                     have_unseen_words = True
@@ -116,7 +124,7 @@ def generate_ri_map(method, students, professors, model, window_size):
     return None
 
 
-def find_closest_to(student_idx, students, professors, model, map_dict=None, topn=1, target_role='student'):
+def find_closest_to(student_idx, students, professors, model, map_dict, topn, target_role):
     """
     find top matching students/professors for the input student using semantic similarity
     between research interests and previously trained word embedding model
