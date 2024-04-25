@@ -16,7 +16,7 @@ DATA_DIR = './data/'
 MODELS_DIR = './models/'
 DATASET_NAME = 'university_data.xlsx'
 
-SPLIT_METHOD = 'token'  # select between 'phrase' and 'token'
+SPLIT_METHOD = 'phrase'  # select between 'phrase' and 'token'
 WINDOW_SIZE = 4  # window size for cluster mapping
 
 MODEL_LIB = 'gensim'  # select between 'gensim' and 'huggingface'
@@ -207,8 +207,8 @@ def main():
     logging.info('----------------------------')
 
     for idx, target in enumerate(most_similar_targets):
-        logging.info('******++')
-        logging.info("best %s #%d}: %s}", TARGET_ROLE, idx+1, target['Name'])
+        logging.info('************')
+        logging.info("best %s #%d: %s", TARGET_ROLE, idx+1, target['Name'])
         logging.info("%s research interests: %s", TARGET_ROLE, target['Research Interests'])
         logging.info("%s department: %s", TARGET_ROLE, target['University Field'])
 
