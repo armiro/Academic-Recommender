@@ -7,7 +7,8 @@ import pandas as pd
 
 import gensim.downloader as dl_api
 from preprocessing import preprocess
-from utils.helper_functions import *
+from utils.helper_functions import create_embedding_map_for, create_cluster_map_for
+from utils.helper_functions import generate_vectors_from, load_model
 
 
 CACHE_DIR = './cache/'
@@ -16,14 +17,14 @@ MODELS_DIR = './models/'
 DATASET_NAME = 'university_data.xlsx'
 
 SPLIT_METHOD = 'phrase'  # select between 'phrase' and 'token'
-WINDOW_SIZE = 5  # window size for cluster mapping
+WINDOW_SIZE = 4  # window size for cluster mapping
 
 MODEL_LIB = 'gensim'  # select between 'gensim' and 'huggingface'
 MODEL_NAME = 'glove-wiki-gigaword-50'  # gensim model
 # MODEL_NAME = 'Word2vec/wikipedia2vec_enwiki_20180420_100d'  # hf model
 MODEL_FILE = MODELS_DIR + MODEL_NAME + '.pkl'  # if file available
 
-STUDENT_ID = 886
+STUDENT_ID = 900
 TOPN = 5
 TARGET_ROLE = 'student'  # select between 'student' and 'prof'
 
@@ -88,8 +89,9 @@ def generate_ri_map(method, students, professors, model, window_size):
     have_unseen_words = check_for_unseen_words_in(pd.concat([students['Tokenized RIs'],
                                                              professors['Tokenized RIs']]),
                                                   model=model)
-    # if method == 'token' and have_unseen_words:
-    #     raise ValueError('there are words not available in ')
+    if method == 'token' and have_unseen_words:
+        raise ValueError("there are words unseen in model vocab, set SPLIT_METHOD to 'phrase'")
+
     if method == 'phrase':
         print('----------------------------')
         print('creating embedding map for phrases...')
@@ -163,11 +165,10 @@ def main():
     :return: None
     """
     df_students, df_profs = load_data(data_path=DATA_DIR + DATASET_NAME, method=SPLIT_METHOD)
-    available_corpora = dl_api.info()['models']
 
     # see all models and their file sizes
     print('*** list of pretrained models in gensim library ***')
-    for name, metadata in available_corpora.items():
+    for name, metadata in dl_api.info()['models'].items():
         if not name.startswith('_'):
             print(f"name: {name}, size: {round(metadata['file_size']/(1024*1024))} MB")
 
