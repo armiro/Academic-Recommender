@@ -1,6 +1,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blueviolet.svg)](https://opensource.org/licenses/MIT)
 ![Status: Final](https://img.shields.io/badge/Status-Final-yellowgreen.svg)
-![Pylint](https://img.shields.io/badge/PyLint-9.17/10-brightgreen)
+![Pylint](https://img.shields.io/badge/PyLint-9.26/10-brightgreen)
 # Academic-Recommender
 
 A basic word-embedding model to find best matching students or professors, and recommend the top n results
