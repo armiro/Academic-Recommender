@@ -1,6 +1,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blueviolet.svg)](https://opensource.org/licenses/MIT)
 ![Status: Final](https://img.shields.io/badge/Status-Final-yellowgreen.svg)
-![Pylint](https://img.shields.io/badge/PyLint-9.26/10-brightgreen)
+![Pylint](https://img.shields.io/badge/PyLint-9.39/10-brightgreen)
 # Academic-Recommender
 
 A basic word-embedding model to find best matching students or professors, and recommend the top n results
@@ -38,7 +38,7 @@ after importing libraries, and can be changed manually.
 ### Using Local API
 Run this command in the CLI to open a local Flask API:
 
-`python ./app.py -dataset=university_data.xlsx -model_lib=gensim -model_name=fasttext -wiki-news-subwords-300`
+`python ./app.py -dataset=university_data.xlsx -model_lib=gensim -model_name=fasttext-wiki-news-subwords-300`
 
 Go to `http://0.0.0.0:105` or `http://127.0.0.1:105`. Full url must also have other params, for example:
 
