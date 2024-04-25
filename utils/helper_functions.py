@@ -13,6 +13,7 @@ CACHE_DIR = './cache/'
 def create_embedding_map_for(dataframe, col_name, model, map_dict):
     """
     create custom mapping over word combinations not available in pretrained model
+    by averaging its sub-word vectors
 
     :param dataframe: pandas dataframe
     :param col_name: string, dataframe column to perform mapping on
@@ -27,9 +28,47 @@ def create_embedding_map_for(dataframe, col_name, model, map_dict):
     return map_dict
 
 
+def create_cluster_map_for(dataframe, target_col, ref_col, model, map_dict, window_size=5):
+    """
+    create mapping for phrases not available in pretrained model by iterating over
+    clusters created from unique values in target_col, and averaging neighboring phrases
+
+    :param dataframe: pandas dataframe
+    :param target_col: string, dataframe column to perform mapping on
+    :param ref_col: string, dataframe column to use as clusters
+    :param model: word embedding model (previously trained)
+    :param window_size: integer, num neighboring phrases to look at
+    :param map_dict: dict
+    :return: dict
+    """
+    uniq_ref_values = dataframe[ref_col].unique()
+
+    # perform mapping for each cluster, based on neighboring phrases only in that cluster
+    for ref_val in uniq_ref_values:
+        ref_df = dataframe.loc[dataframe[ref_col] == ref_val, target_col]
+        ref_phrases = list(set(sum(ref_df.tolist(), [])))
+
+        for idx, phrase in enumerate(ref_phrases):
+            if phrase not in model.key_to_index:  # multi-word or unseen phrases
+                start_idx = max(0, idx - window_size)
+                end_idx = min(len(ref_phrases), idx + window_size + 1)
+                context_phrases = ref_phrases[start_idx:end_idx]
+                word_vecs = []
+
+                for context_phrase in context_phrases:
+                    for word in context_phrase.split():
+                        if word in model:
+                            word_vecs.append(model[word])
+
+                map_dict[phrase] = sum(word_vecs)/len(word_vecs)
+
+    return map_dict
+
+
 def generate_vectors_from(words, model, map_dict):
     """
-    generate word vector from model or embedding map, depending on being phrase or token
+    generate word vector from pretrained model or constructed embedding map, depending on
+    word being available in model's vocab
 
     :param words: list of strings
     :param model: word embedding model (previously trained)
@@ -38,7 +77,7 @@ def generate_vectors_from(words, model, map_dict):
     """
     vectors = []
     for word in words:
-        if len(word.split()) > 1:
+        if word not in model.key_to_index:
             vectors.append(map_dict[word])
         else:
             vectors.append(model.get_vector(word))
