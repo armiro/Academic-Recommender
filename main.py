@@ -14,13 +14,13 @@ from utils.helper_functions import generate_vectors_from, load_model
 CACHE_DIR = './cache/'
 DATA_DIR = './data/'
 MODELS_DIR = './models/'
-DATASET_NAME = 'university_data_gs.xlsx'
+DATASET_NAME = 'university_data.xlsx'
 
 SPLIT_METHOD = 'phrase'  # select between 'phrase' and 'token'
 WINDOW_SIZE = 4  # window size for cluster mapping
 
 MODEL_LIB = 'gensim'  # select between 'gensim' and 'huggingface'
-MODEL_NAME = 'glove-wiki-gigaword-50'  # gensim model
+MODEL_NAME = 'fasttext-wiki-news-subwords-300'  # gensim model
 # MODEL_NAME = 'Word2vec/wikipedia2vec_enwiki_20180420_100d'  # hf model
 MODEL_FILE = MODELS_DIR + MODEL_NAME + '.pkl'  # if file available
 
