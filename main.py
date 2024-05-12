@@ -14,7 +14,7 @@ from utils.helper_functions import generate_vectors_from, load_model
 CACHE_DIR = './cache/'
 DATA_DIR = './data/'
 MODELS_DIR = './models/'
-DATASET_NAME = 'university_data.xlsx'
+DATASET_NAME = 'university_data_gs.xlsx'
 
 SPLIT_METHOD = 'phrase'  # select between 'phrase' and 'token'
 WINDOW_SIZE = 4  # window size for cluster mapping
@@ -24,9 +24,9 @@ MODEL_NAME = 'glove-wiki-gigaword-50'  # gensim model
 # MODEL_NAME = 'Word2vec/wikipedia2vec_enwiki_20180420_100d'  # hf model
 MODEL_FILE = MODELS_DIR + MODEL_NAME + '.pkl'  # if file available
 
-STUDENT_ID = 900
+STUDENT_ID = 6507
 TOPN = 5
-TARGET_ROLE = 'student'  # select between 'student' and 'prof'
+TARGET_ROLE = 'prof'  # select between 'student' and 'prof'
 
 logging.basicConfig(format='%(asctime)s: %(levelname)s: %(message)s', level=logging.INFO)
 
@@ -44,12 +44,13 @@ def load_data(data_path, method):
     df_profs = pd.read_excel(xls_file, sheet_name=xls_file.sheet_names[1])
     df_students = pd.read_excel(xls_file, sheet_name=xls_file.sheet_names[0])
 
-    df_profs.dropna(axis=0, inplace=True)  # drop empty rows
-    df_students.dropna(axis=0, inplace=True)  # drop empty rows
+    # drop rows with empty name or research interests
+    df_profs = df_profs.dropna(subset=['Name', 'Research Interests'], how='any')
+    df_students = df_students.dropna(subset=['Name', 'Research Interests'], how='any')
 
-    # sanity check over null values
-    assert df_profs.all().all()
-    assert df_students.all().all()
+    # # sanity check over null values
+    # assert df_profs.all().all()
+    # assert df_students.all().all()
 
     # apply preprocessing steps, defined separately
     df_profs['Tokenized RIs'] = df_profs['Research Interests'].apply(
@@ -186,7 +187,7 @@ def main():
     st = time.time()
     pretrained_model = load_model(library=MODEL_LIB, model_name=MODEL_NAME, model_file=MODEL_FILE)
     logging.info('model importing done!')
-    logging.critical('elapsed time: %d secs', round(time.time() - st))
+    logging.critical('elapsed time: %.2f secs', time.time() - st)
 
     ri_map = generate_ri_map(method=SPLIT_METHOD, students=df_students, professors=df_students,
                              model=pretrained_model, window_size=WINDOW_SIZE)
@@ -203,7 +204,7 @@ def main():
                                            professors=df_profs, model=pretrained_model,
                                            map_dict=ri_map, topn=TOPN, target_role=TARGET_ROLE)
     logging.info('search done!')
-    logging.critical('elapsed time: %d secs', round(time.time() - st))
+    logging.critical('elapsed time: %.2f secs', time.time() - st)
     logging.info('----------------------------')
 
     for idx, target in enumerate(most_similar_targets):
