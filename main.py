@@ -189,7 +189,7 @@ def main():
     logging.info('model importing done!')
     logging.critical('elapsed time: %.2f secs', time.time() - st)
 
-    ri_map = generate_ri_map(method=SPLIT_METHOD, students=df_students, professors=df_students,
+    ri_map = generate_ri_map(method=SPLIT_METHOD, students=df_students, professors=df_profs,
                              model=pretrained_model, window_size=WINDOW_SIZE)
 
     logging.info('----------------------------')
