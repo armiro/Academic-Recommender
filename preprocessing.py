@@ -17,7 +17,7 @@ def str_to_list(input_str):
     :param input_str: string
     :return: list
     """
-    delimiters = ', |; |-'
+    delimiters = ', |; |\| | - '
     return list(re.split(pattern=delimiters, string=input_str))
 
 
@@ -39,7 +39,7 @@ def remove_stop_words_from(input_list, method):
     :param method: string, splitting method to tokenize strings; ['phrase' or 'token']
     :return: list
     """
-    stop_words = stopwords.words('english')
+    stop_words = stopwords.words('english') + ['…', '&', '...']  # TODO: remove empty strings
     if method == 'token':
         return [e for w in input_list for e in w.split() if e not in stop_words]  # & return tokens
     elif method == 'phrase':
