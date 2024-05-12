@@ -26,7 +26,8 @@ Training/fine-tuning models on external data is also possible, while relevant da
 
 ## Documentation
 To see an overview of the project and a brief report, open the [proof_of_concept](./proof_of_concept.ipynb) 
-notebook.
+notebook. Also, to see a comparison of different algorithms in terms of model size, inference speed, and 
+performance over the edge cases, see [method_comparison](./method_comparison_cases.pdf) PDF file.
 
 ## How to Run
 It usually takes 4 to 20 seconds to see the results, depending on model weight, dataset size, and 
