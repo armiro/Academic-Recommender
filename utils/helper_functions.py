@@ -4,19 +4,21 @@ Several useful functions
 import os
 import pickle
 
-from sentence_transformers import SentenceTransformer
+from transformers import BertModel, BertTokenizer
+import torch
 
 CACHE_DIR = './cache/'
 
 
-def create_encoding_map_for(dataframe, col_name, model, cache_file):
+def create_encoding_map_for(dataframe, col_name, model, tokenizer, cache_file):
     """
     use sentence transformer to encode each set of research interests into a single
     encoded tensor
 
     :param dataframe: pandas dataframe
     :param col_name: string, dataframe column to perform encoding on
-    :param model: sentence transformer model (pretrained)
+    :param model: BERT model (pretrained)
+    :param tokenizer: BERT tokenizer (pretrained)
     :param cache_file: path to cached embeddings file (if available)
     :return: list of tensors
     """
@@ -26,26 +28,31 @@ def create_encoding_map_for(dataframe, col_name, model, cache_file):
         with open(cache_path, mode='rb') as file:
             map_dict = pickle.load(file)
     else:
-        for idx, ris in enumerate(dataframe[col_name]):
-            map_dict[idx] = model.encode(ris, batch_size=32, convert_to_tensor=True,
-                                         show_progress_bar=False, precision='float32')
+        with torch.no_grad():
+            for idx, ris in enumerate(dataframe[col_name]):
+                tokens = tokenizer.encode(ris, return_tensors='pt')
+                map_dict[idx] = model(tokens)[0].mean(dim=1)
         # store embeddings in cache directory
         with open(cache_path, mode='wb') as file:
             pickle.dump(map_dict, file)
     return map_dict
 
 
-def load_model(model_name, model_file):
+def load_model(model_name, model_dir):
     """
-    load pretrained model from the library (sentence transformers)
+    load pretrained BERT model from the library
 
     :param model_name: string, model file name available in the library
-    :param model_file: string, locally stored model file path
+    :param model_dir: string, locally stored model/tokenizer folder path
     :return: pretrained sentence transformer model
     """
-    if os.path.exists(model_file):
-        model = SentenceTransformer(model_name_or_path=model_file, cache_folder=CACHE_DIR)
+    if os.path.exists(model_dir):
+        tokenizer = BertTokenizer.from_pretrained(model_dir + '/tokenizer/')
+        model = BertModel.from_pretrained(model_dir + '/model/')
     else:
-        model = SentenceTransformer(model_name_or_path=model_name, cache_folder=CACHE_DIR)
-        model.save(path=model_file)
-    return model
+        tokenizer = BertTokenizer.from_pretrained(model_name)
+        model = BertModel.from_pretrained(model_name)
+        tokenizer.save_pretrained(model_dir+'/tokenizer/')
+        model.save_pretrained(model_dir + '/model/')
+
+    return model, tokenizer
