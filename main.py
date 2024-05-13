@@ -13,7 +13,7 @@ from sentence_transformers import util
 CACHE_DIR = './cache/'
 DATA_DIR = './data/'
 MODELS_DIR = './models/'
-DATASET_NAME = 'university_data_gs.xlsx'
+DATASET_NAME = 'university_data.xlsx'
 
 MODEL_NAME = 'all-MiniLM-L12-v2'  # sentence transformer model
 MODEL_FILE = MODELS_DIR + MODEL_NAME  # if saved folder available
@@ -48,30 +48,20 @@ def load_data(data_path):
     return df_students, df_profs
 
 
-def find_closest_to(student_idx, students, professors, model, map_dict, topn, target_role):
+def find_closest_to(this_student, dataframe, model, map_dict, topn):
     """
     find top matching students/professors for the input student using semantic similarity
     between research interests and previously trained word embedding model
 
-    :param student_idx: int
-    :param students: pandas dataframe
-    :param professors: pandas dataframe
+    :param this_student: string
+    :param dataframe: pandas dataframe
     :param model: word embedding model - sentence transformer (pretrained)
-    :param map_dict: dict, encoding map of all data records
+    :param map_dict: dict, encoding map of target dataframe records
     :param topn: int, number of suggestions
-    :param target_role: string, target role to be suggested; ['student' or 'prof']
     :return: list of dicts
     """
-    student_ris = students['Preprocessed RIs'][student_idx]
-    student_embd = model.encode(student_ris, precision='float32', convert_to_tensor=True,
+    student_embd = model.encode(this_student, precision='float32', convert_to_tensor=True,
                                 show_progress_bar=False)
-
-    target_df = professors if target_role == 'prof' else students if target_role == 'student' else None
-    if target_df is None:
-        logging.error('invalid target role value: %s', target_role)
-        raise ValueError("target role must either be 'prof' or 'student'")
-    if target_role == 'student':  # drop input student if recommending students
-        target_df = target_df.drop(student_idx)
 
     cos_sims = []
     # iterate over each target (student/professor) embedding
@@ -81,7 +71,7 @@ def find_closest_to(student_idx, students, professors, model, map_dict, topn, ta
         cos_sims.append((target_id, cos_sim))
 
     sorted_sims = sorted(cos_sims, key=lambda x: x[1], reverse=True)  # sort similarities
-    topn_targets = [target_df.loc[idx] for idx, _ in sorted_sims[:topn]]  # extract top n
+    topn_targets = [dataframe.loc[idx] for idx, _ in sorted_sims[:topn]]  # extract top n
     return topn_targets
 
 
@@ -93,6 +83,14 @@ def main():
     :return: None
     """
     df_students, df_profs = load_data(data_path=DATA_DIR + DATASET_NAME)
+    student_ris = df_students['Preprocessed RIs'][STUDENT_ID]
+    target_df = df_profs if TARGET_ROLE == 'prof' else df_students if TARGET_ROLE == 'student' else None
+
+    if target_df is None:
+        logging.error('invalid target role value: %s', TARGET_ROLE)
+        raise ValueError("target role must either be 'prof' or 'student'")
+    if TARGET_ROLE == 'student':  # drop input student if recommending students
+        target_df = target_df.drop(STUDENT_ID)
 
     logging.info('----------------------------')
     logging.info('loading sentence transformer model ...')
@@ -102,12 +100,10 @@ def main():
     logging.critical('elapsed time: %.2f secs', time.time() - st)
 
     st = time.time()
-    logging.info('creating encoding map from both datasets ...')
-    encoding_map = {}
-    encoding_map = create_encoding_map_for(dataframe=df_profs, col_name='Preprocessed RIs',
-                                           model=pretrained_model, map_dict=encoding_map)
-    encoding_map = create_encoding_map_for(dataframe=df_students, col_name='Preprocessed RIs',
-                                           model=pretrained_model, map_dict=encoding_map)
+    logging.info('creating encoding map for target dataset ...')
+    cache_file = f"{DATASET_NAME.split('.')[0]},{MODEL_NAME},{TARGET_ROLE}.pkl"
+    encoding_map = create_encoding_map_for(dataframe=target_df, col_name='Preprocessed RIs',
+                                           model=pretrained_model, cache_file=cache_file)
     logging.info('encoding map created!')
     logging.critical('elapsed time: %.2f secs', time.time() - st)
 
@@ -119,9 +115,8 @@ def main():
     logging.info('----------------------------')
     logging.info('searching for %ss ...', TARGET_ROLE)
     st = time.time()
-    most_similar_targets = find_closest_to(student_idx=STUDENT_ID, students=df_students,
-                                           professors=df_profs, model=pretrained_model,
-                                           map_dict=encoding_map, topn=TOPN, target_role=TARGET_ROLE)
+    most_similar_targets = find_closest_to(this_student=student_ris, dataframe=target_df, topn=TOPN,
+                                           model=pretrained_model, map_dict=encoding_map)
     logging.info('search done!')
     logging.critical('elapsed time: %.2f secs', time.time() - st)
     logging.info('----------------------------')
