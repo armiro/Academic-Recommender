@@ -21,7 +21,8 @@ def create_encoding_map_for(dataframe, col_name, model):
     """
     encoding_map = {}
     for idx, ris in enumerate(dataframe[col_name]):
-        encoding_map[idx] = model.encode(ris, convert_to_tensor=True)
+        encoding_map[idx] = model.encode(ris, batch_size=32, convert_to_tensor=True,
+                                         show_progress_bar=False, precision='float32')
     return encoding_map
 
 
