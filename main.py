@@ -6,21 +6,22 @@ import time
 import logging
 import pandas as pd
 
+from sentence_transformers import util
 from preprocessing import preprocess
 from utils.helper_functions import create_encoding_map_for, load_model
-from sentence_transformers import util
+
 
 CACHE_DIR = './cache/'
 DATA_DIR = './data/'
 MODELS_DIR = './models/'
-DATASET_NAME = 'university_data.xlsx'
+DATASET_NAME = 'university_data_gs.xlsx'
 
 MODEL_NAME = 'all-MiniLM-L12-v2'  # sentence transformer model
 MODEL_FILE = MODELS_DIR + MODEL_NAME  # if saved folder available
 
 STUDENT_ID = 6507
 TOPN = 5
-TARGET_ROLE = 'student'  # select between 'student' and 'prof'
+TARGET_ROLE = 'prof'  # select between 'student' and 'prof'
 
 logging.basicConfig(format='%(asctime)s: %(levelname)s: %(message)s', level=logging.INFO)
 
@@ -42,8 +43,8 @@ def load_data(data_path):
     df_students = df_students.dropna(subset=['Name', 'Research Interests'], how='any')
 
     # apply preprocessing steps, defined separately
-    df_profs['Preprocessed RIs'] = df_profs['Research Interests'].apply(lambda x: preprocess(x))
-    df_students['Preprocessed RIs'] = df_students['Research Interests'].apply(lambda x: preprocess(x))
+    df_profs['Preprocessed RIs'] = df_profs['Research Interests'].apply(preprocess)
+    df_students['Preprocessed RIs'] = df_students['Research Interests'].apply(preprocess)
 
     return df_students, df_profs
 

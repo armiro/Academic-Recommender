@@ -2,7 +2,6 @@
 Several useful functions
 """
 import os
-import logging
 import pickle
 
 from sentence_transformers import SentenceTransformer
