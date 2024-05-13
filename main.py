@@ -9,22 +9,20 @@ import pandas as pd
 from preprocessing import preprocess
 from utils.helper_functions import create_encoding_map_for, load_model
 from sentence_transformers import util
-from transformers.utils import logging as tlogging
 
 CACHE_DIR = './cache/'
 DATA_DIR = './data/'
 MODELS_DIR = './models/'
-DATASET_NAME = 'university_data.xlsx'
+DATASET_NAME = 'university_data_gs.xlsx'
 
-MODEL_NAME = 'all-MiniLM-L12-v2'
-MODEL_FILE = MODELS_DIR + MODEL_NAME  # if folder available
+MODEL_NAME = 'all-MiniLM-L12-v2'  # sentence transformer model
+MODEL_FILE = MODELS_DIR + MODEL_NAME  # if saved folder available
 
 STUDENT_ID = 6507
 TOPN = 5
 TARGET_ROLE = 'prof'  # select between 'student' and 'prof'
 
 logging.basicConfig(format='%(asctime)s: %(levelname)s: %(message)s', level=logging.INFO)
-tlogging.disable_progress_bar()  # disable tqdm bar when encoding inputs
 
 
 def load_data(data_path):
@@ -65,7 +63,8 @@ def find_closest_to(student_idx, students, professors, model, map_dict, topn, ta
     :return: list of dicts
     """
     student_ris = students['Preprocessed RIs'][student_idx]
-    student_embd = model.encode(student_ris, convert_to_tensor=True)
+    student_embd = model.encode(student_ris, precision='float32', convert_to_tensor=True,
+                                show_progress_bar=False)
 
     target_df = professors if target_role == 'prof' else students if target_role == 'student' else None
     if target_df is None:
@@ -75,15 +74,14 @@ def find_closest_to(student_idx, students, professors, model, map_dict, topn, ta
         target_df = target_df.drop(student_idx)
 
     cos_sims = []
-    # iterate over each target (student/professor)
+    # iterate over each target (student/professor) embedding
     for target_id, target_embd in map_dict.items():
         # calculate cosine similarity between student and target embeddings
         cos_sim = util.pytorch_cos_sim(student_embd, target_embd)
         cos_sims.append((target_id, cos_sim))
 
     sorted_sims = sorted(cos_sims, key=lambda x: x[1], reverse=True)  # sort similarities
-    # extract top n students/profs based on maximum similarity
-    topn_targets = [target_df.loc[target_id] for target_id, _ in sorted_sims[:topn]]
+    topn_targets = [target_df.loc[idx] for idx, _ in sorted_sims[:topn]]  # extract top n
     return topn_targets
 
 
@@ -97,16 +95,19 @@ def main():
     df_students, df_profs = load_data(data_path=DATA_DIR + DATASET_NAME)
 
     logging.info('----------------------------')
-    logging.info('loading word embedding model...')
+    logging.info('loading sentence transformer model ...')
     st = time.time()
     pretrained_model = load_model(model_name=MODEL_NAME, model_file=MODEL_FILE)
     logging.info('model importing done!')
     logging.critical('elapsed time: %.2f secs', time.time() - st)
 
     st = time.time()
-    logging.info('creating encoding map using sentence transformer')
+    logging.info('creating encoding map from both datasets ...')
+    encoding_map = {}
     encoding_map = create_encoding_map_for(dataframe=df_profs, col_name='Preprocessed RIs',
-                                           model=pretrained_model)
+                                           model=pretrained_model, map_dict=encoding_map)
+    encoding_map = create_encoding_map_for(dataframe=df_students, col_name='Preprocessed RIs',
+                                           model=pretrained_model, map_dict=encoding_map)
     logging.info('encoding map created!')
     logging.critical('elapsed time: %.2f secs', time.time() - st)
 
