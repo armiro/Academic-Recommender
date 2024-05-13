@@ -31,21 +31,15 @@ def normalize(input_list):
     return [e.lower().strip() for e in input_list]
 
 
-def remove_stop_words_from(input_list, method):
+def remove_stop_words_from(input_list):
     """
     remove stop words like 'of' or 'and'
 
     :param input_list: list of strings
-    :param method: string, splitting method to tokenize strings; ['phrase' or 'token']
     :return: list
     """
     stop_words = stopwords.words('english') + ['…', '&', '...']  # TODO: remove empty strings
-    if method == 'token':
-        return [e for w in input_list for e in w.split() if e not in stop_words]  # & return tokens
-    elif method == 'phrase':
-        return [' '.join([e for e in w.split() if e not in stop_words]) for w in input_list]
-    else:
-        raise ValueError("splitting method should either be 'phrase' or 'token'")
+    return [' '.join([e for e in w.split() if e not in stop_words]) for w in input_list]
 
 
 # TODO: use local vocab to make the dictionary more robust
@@ -64,28 +58,16 @@ def check_spells_in(input_list):
             logging.critical('best correction: %s', speller.correction(misspelled.pop()))
 
 
-def split_into_tokens(input_list):
-    """
-    convert list of interests into single words
-
-    :param input_list: list of strings
-    :return: list
-    """
-    return [token for word in input_list for token in word.split()]
-
-
 # TODO: remove punctuations, numbers, links
-def preprocess(input_str, method):
+def preprocess(input_str):
     """
     apply preprocessing steps on the input string
 
     :param input_str: string
-    :param method: string, splitting method to tokenize strings; ['phrase' or 'token']
-    :return: list
+    :return: string
     """
     input_list = str_to_list(input_str)
     normalized_list = normalize(input_list)
-    cleaned_list = remove_stop_words_from(normalized_list, method)
+    cleaned_list = remove_stop_words_from(normalized_list)
     # check_spells_in(cleaned_list)  # view-only; no output yet
-    # extracted_tokens_list = split_into_tokens(cleaned_list)
-    return cleaned_list
+    return ', '.join(cleaned_list)
