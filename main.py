@@ -5,8 +5,8 @@ Developed by Arman H. (https://github.com/armiro)
 import time
 import logging
 import pandas as pd
+import torch
 
-from sentence_transformers import util
 from preprocessing import preprocess
 from utils.helper_functions import create_encoding_map_for, load_model
 
@@ -14,10 +14,10 @@ from utils.helper_functions import create_encoding_map_for, load_model
 CACHE_DIR = './cache/'
 DATA_DIR = './data/'
 MODELS_DIR = './models/'
-DATASET_NAME = 'university_data_gs.xlsx'
+DATASET_NAME = 'university_data.xlsx'
 
-MODEL_NAME = 'all-MiniLM-L12-v2'  # sentence transformer model
-MODEL_FILE = MODELS_DIR + MODEL_NAME  # if saved folder available
+MODEL_NAME = 'bert-base-uncased'  # sentence transformer model
+MODEL_DIR = MODELS_DIR + MODEL_NAME  # if saved folder available
 
 STUDENT_ID = 6507
 TOPN = 5
@@ -49,26 +49,27 @@ def load_data(data_path):
     return df_students, df_profs
 
 
-def find_closest_to(this_student, dataframe, model, map_dict, topn):
+def find_closest_to(this_student, dataframe, model, tokenizer, map_dict, topn):
     """
     find top matching students/professors for the input student using semantic similarity
     between research interests and previously trained word embedding model
 
     :param this_student: string
     :param dataframe: pandas dataframe
-    :param model: word embedding model - sentence transformer (pretrained)
+    :param model: word embedding model - BERT (pretrained)
+    :param tokenizer: tokenizer - BERT (pretrained)
     :param map_dict: dict, encoding map of target dataframe records
     :param topn: int, number of suggestions
     :return: list of dicts
     """
-    student_embd = model.encode(this_student, precision='float32', convert_to_tensor=True,
-                                show_progress_bar=False)
+    student_tokens = tokenizer.encode(this_student, return_tensors='pt')
+    student_embd = model(student_tokens)[0].mean(dim=1)
 
     cos_sims = []
     # iterate over each target (student/professor) embedding
     for target_id, target_embd in map_dict.items():
         # calculate cosine similarity between student and target embeddings
-        cos_sim = util.pytorch_cos_sim(student_embd, target_embd)
+        cos_sim = torch.cosine_similarity(student_embd, target_embd)
         cos_sims.append((target_id, cos_sim))
 
     sorted_sims = sorted(cos_sims, key=lambda x: x[1], reverse=True)  # sort similarities
@@ -92,9 +93,9 @@ def main():
         raise ValueError("target role must either be 'prof' or 'student'")
 
     logging.info('----------------------------')
-    logging.info('loading sentence transformer model ...')
+    logging.info('loading BERT model and tokenizer ...')
     st = time.time()
-    pretrained_model = load_model(model_name=MODEL_NAME, model_file=MODEL_FILE)
+    pretrained_model, tokenizer = load_model(model_name=MODEL_NAME, model_dir=MODEL_DIR)
     logging.info('model importing done!')
     logging.critical('elapsed time: %.2f secs', time.time() - st)
 
@@ -102,7 +103,8 @@ def main():
     logging.info('creating encoding map for target dataset ...')
     cache_file = f"{DATASET_NAME.split('.')[0]},{MODEL_NAME},{TARGET_ROLE}.pkl"
     encoding_map = create_encoding_map_for(dataframe=target_df, col_name='Preprocessed RIs',
-                                           model=pretrained_model, cache_file=cache_file)
+                                           model=pretrained_model, tokenizer=tokenizer,
+                                           cache_file=cache_file)
     logging.info('encoding map created!')
     logging.critical('elapsed time: %.2f secs', time.time() - st)
 
@@ -119,7 +121,8 @@ def main():
     logging.info('searching for %ss ...', TARGET_ROLE)
     st = time.time()
     most_similar_targets = find_closest_to(this_student=student_ris, dataframe=target_df, topn=TOPN,
-                                           model=pretrained_model, map_dict=encoding_map)
+                                           model=pretrained_model, tokenizer=tokenizer,
+                                           map_dict=encoding_map)
     logging.info('search done!')
     logging.critical('elapsed time: %.2f secs', time.time() - st)
     logging.info('----------------------------')
