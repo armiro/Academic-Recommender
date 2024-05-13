@@ -9,7 +9,7 @@ from sentence_transformers import SentenceTransformer
 CACHE_DIR = './cache/'
 
 
-def create_encoding_map_for(dataframe, col_name, model):
+def create_encoding_map_for(dataframe, col_name, model, map_dict):
     """
     use sentence transformer to encode each set of research interests into a single
     encoded tensor
@@ -17,13 +17,13 @@ def create_encoding_map_for(dataframe, col_name, model):
     :param dataframe: pandas dataframe
     :param col_name: string, dataframe column to perform encoding on
     :param model: sentence transformer model (pretrained)
+    :param map_dict: dict, placeholder to store encodings
     :return: list of tensors
     """
-    encoding_map = {}
     for idx, ris in enumerate(dataframe[col_name]):
-        encoding_map[idx] = model.encode(ris, batch_size=32, convert_to_tensor=True,
-                                         show_progress_bar=False, precision='float32')
-    return encoding_map
+        map_dict[idx] = model.encode(ris, batch_size=32, convert_to_tensor=True,
+                                     show_progress_bar=False, precision='float32')
+    return map_dict
 
 
 def load_model(model_name, model_file):
