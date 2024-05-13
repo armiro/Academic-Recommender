@@ -20,7 +20,7 @@ MODEL_FILE = MODELS_DIR + MODEL_NAME  # if saved folder available
 
 STUDENT_ID = 6507
 TOPN = 5
-TARGET_ROLE = 'prof'  # select between 'student' and 'prof'
+TARGET_ROLE = 'student'  # select between 'student' and 'prof'
 
 logging.basicConfig(format='%(asctime)s: %(levelname)s: %(message)s', level=logging.INFO)
 
@@ -89,8 +89,6 @@ def main():
     if target_df is None:
         logging.error('invalid target role value: %s', TARGET_ROLE)
         raise ValueError("target role must either be 'prof' or 'student'")
-    if TARGET_ROLE == 'student':  # drop input student if recommending students
-        target_df = target_df.drop(STUDENT_ID)
 
     logging.info('----------------------------')
     logging.info('loading sentence transformer model ...')
@@ -111,6 +109,10 @@ def main():
     logging.info('Student Name: %s', df_students['Name'][STUDENT_ID])
     logging.info('Student Research Interests: %s', df_students['Research Interests'][STUDENT_ID])
     logging.info('Student Department: %s', df_students['University Field'][STUDENT_ID])
+
+    if TARGET_ROLE == 'student':  # drop ref student from df/dict if recommending students
+        target_df = target_df.drop(STUDENT_ID)
+        encoding_map.pop(STUDENT_ID, None)
 
     logging.info('----------------------------')
     logging.info('searching for %ss ...', TARGET_ROLE)
