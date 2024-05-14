@@ -4,7 +4,7 @@ Local Flask API
 import argparse
 import logging
 from flask import Flask, request, jsonify
-from main import find_closest_to, load_data, generate_ri_map
+from main import find_closest_to, load_data
 from utils.helper_functions import load_model
 
 
@@ -43,17 +43,13 @@ def get_topn_professors():
         topn = int(request.args.get('topn', 1))  # num suggestions; default to 1
         target = request.args.get('recommend')
         split_method = request.args.get('method', DEFAULT_SPLIT_METHOD)  # word splitting method
-        window_size = int(request.args.get('winsize', 5))  # window size for cluster embedding
         model_file = MODELS_DIR + args.model_name + '.pkl'  # preloaded model file (if available)
 
         df_students, df_profs = load_data(data_path=DATA_DIR + args.dataset, method=split_method)
         pretrained_model = load_model(library=args.model_lib, model_name=args.model_name,
                                       model_file=model_file)
-        ri_map = generate_ri_map(method=split_method, students=df_students, professors=df_students,
-                                 model=pretrained_model, window_size=window_size)
-        top_profs = find_closest_to(student_idx=student_id, students=df_students,
-                                    professors=df_profs, model=pretrained_model, map_dict=ri_map,
-                                    topn=topn, target_role=target)
+        top_profs = find_closest_to(student_idx=student_id, students=df_students, topn=topn,
+                                    professors=df_profs, model=pretrained_model, target_role=target)
 
         # format the response as json
         serialized_top_profs = [prof.drop('Tokenized RIs').to_dict() for prof in top_profs]
