@@ -17,7 +17,7 @@ def str_to_list(input_str):
     :param input_str: string
     :return: list
     """
-    delimiters = ', |; |\| | - '
+    delimiters = r', |; |\| | - '
     return list(re.split(pattern=delimiters, string=input_str))
 
 
