@@ -2,6 +2,7 @@
 Academic Student-Student and Student-Professor Recommender using Word Embedding Models
 Developed by Arman H. (https://github.com/armiro)
 """
+import os.path
 import time
 import logging
 import pandas as pd
@@ -101,7 +102,7 @@ def main():
 
     st = time.time()
     logging.info('creating encoding map for target dataset ...')
-    cache_file = f"{DATASET_NAME.split('.')[0]},{MODEL_NAME},{TARGET_ROLE}.pkl"
+    cache_file = f"{os.path.splitext(DATASET_NAME)[0]},{MODEL_NAME},{TARGET_ROLE}.pkl"
     encoding_map = create_encoding_map_for(dataframe=target_df, col_name='Preprocessed RIs',
                                            model=pretrained_model, tokenizer=tokenizer,
                                            cache_file=cache_file)
