@@ -1,11 +1,12 @@
 """
 Local Flask API
 """
+import os
 import argparse
 import logging
 from flask import Flask, request, jsonify
-from main import find_closest_to, load_data, generate_ri_map
-from utils.helper_functions import load_model
+from main import find_closest_to, load_data
+from utils.helper_functions import load_model, create_encoding_map_for
 
 
 app = Flask(__name__)
@@ -13,12 +14,9 @@ app = Flask(__name__)
 CACHE_DIR = './cache/'
 DATA_DIR = './data/'
 MODELS_DIR = './models/'
-DATASET_NAME = 'university_data.xlsx'
+DATASET_NAME = 'university_data_gs.xlsx'
 
-DEFAULT_SPLIT_METHOD = 'phrase'
-
-DEFAULT_MODEL_LIB = 'gensim'
-DEFAULT_MODEL_NAME = 'fasttext-wiki-news-subwords-300'
+DEFAULT_MODEL_NAME = 'bert-base-uncased'
 
 
 @app.before_request
@@ -42,22 +40,24 @@ def get_topn_professors():
         student_id = int(request.args.get('student_id'))
         topn = int(request.args.get('topn', 1))  # num suggestions; default to 1
         target = request.args.get('recommend')
-        split_method = request.args.get('method', DEFAULT_SPLIT_METHOD)  # word splitting method
-        window_size = int(request.args.get('winsize', 5))  # window size for cluster embedding
-        model_file = MODELS_DIR + args.model_name + '.pkl'  # preloaded model file (if available)
+        model_dir = MODELS_DIR + args.model_name  # preloaded model folder (if available)
 
-        df_students, df_profs = load_data(data_path=DATA_DIR + args.dataset, method=split_method)
-        pretrained_model = load_model(library=args.model_lib, model_name=args.model_name,
-                                      model_file=model_file)
-        ri_map = generate_ri_map(method=split_method, students=df_students, professors=df_students,
-                                 model=pretrained_model, window_size=window_size)
-        top_profs = find_closest_to(student_idx=student_id, students=df_students,
-                                    professors=df_profs, model=pretrained_model, map_dict=ri_map,
-                                    topn=topn, target_role=target)
+        df_students, df_profs = load_data(data_path=DATA_DIR + args.dataset)
+        student_ris = df_students['Preprocessed RIs'][student_id]
+        target_df = df_profs if target == 'prof' else df_students if target == 'student' else None
+
+        pretrained_model, tokenizer = load_model(model_name=args.model_name, model_dir=model_dir)
+        cache_file = f"{os.path.splitext(DATASET_NAME)[0]},{args.model_name},{target}.pkl"
+        encoding_map = create_encoding_map_for(dataframe=target_df, col_name='Preprocessed RIs',
+                                               model=pretrained_model, tokenizer=tokenizer,
+                                               cache_file=cache_file)
+        top_profs = find_closest_to(this_student=student_ris, dataframe=target_df, topn=topn,
+                                    model=pretrained_model, tokenizer=tokenizer,
+                                    map_dict=encoding_map)
 
         # format the response as json
-        serialized_top_profs = [prof.drop('Tokenized RIs').to_dict() for prof in top_profs]
-        response = {'student': df_students.iloc[student_id].drop('Tokenized RIs').to_dict(),
+        serialized_top_profs = [prof.drop('Preprocessed RIs').to_dict() for prof in top_profs]
+        response = {'student': df_students.iloc[student_id].drop('Preprocessed RIs').to_dict(),
                     'top_profs': serialized_top_profs}
         return jsonify(response), 200
 
@@ -68,8 +68,6 @@ def get_topn_professors():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='process cli arguments')
     parser.add_argument('-dataset', type=str, default=DATASET_NAME, help='dataset file name')
-    parser.add_argument('-model_lib', type=str, default=DEFAULT_MODEL_LIB,
-                        help='library for the word embedding model: "gensim" or "huggingface"')
     parser.add_argument('-model_name', type=str, default=DEFAULT_MODEL_NAME,
                         help='name of the pretrained word embedding model')
     args = parser.parse_args()
