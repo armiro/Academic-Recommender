@@ -2,7 +2,7 @@
 Academic Student-Student and Student-Professor Recommender using Word Embedding Models
 Developed by Arman H. (https://github.com/armiro)
 """
-import os.path
+import os
 import time
 import logging
 import pandas as pd
