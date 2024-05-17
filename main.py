@@ -2,6 +2,7 @@
 Academic Student-Student and Student-Professor Recommender using Word Embedding Models
 Developed by Arman H. (https://github.com/armiro)
 """
+import os
 import time
 import logging
 import pandas as pd
@@ -19,7 +20,7 @@ DATASET_NAME = 'university_data_gs.xlsx'
 MODEL_NAME = 'all-MiniLM-L12-v2'  # sentence transformer model
 MODEL_FILE = MODELS_DIR + MODEL_NAME  # if saved folder available
 
-STUDENT_ID = 6507
+STUDENT_ID = 420
 TOPN = 5
 TARGET_ROLE = 'prof'  # select between 'student' and 'prof'
 
@@ -100,7 +101,7 @@ def main():
 
     st = time.time()
     logging.info('creating encoding map for target dataset ...')
-    cache_file = f"{DATASET_NAME.split('.')[0]},{MODEL_NAME},{TARGET_ROLE}.pkl"
+    cache_file = f"{os.path.splitext(DATASET_NAME)[0]},{MODEL_NAME},{TARGET_ROLE}.pkl"
     encoding_map = create_encoding_map_for(dataframe=target_df, col_name='Preprocessed RIs',
                                            model=pretrained_model, cache_file=cache_file)
     logging.info('encoding map created!')
